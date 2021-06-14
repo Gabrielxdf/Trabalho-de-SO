@@ -40,7 +40,7 @@ Os objetivos deste trabalho são:
             5.	A variável que armazena o número de slots ocupados (em outras palavras, indica o próximo slot livre).
 
     e.	Saída de exemplo:
-![saída do programa 1](./pictures/programa1.png)
+![saída do programa 1](./pictures/programa1.PNG)
 <br>
 <br>
 
@@ -80,7 +80,7 @@ Os objetivos deste trabalho são:
         iii. Por limitação da biblioteca pthread.h, as threads só podem ter um argumento de entrada do tipo void, como vocês podem ver nos protótipos acima. Por isso, deve-se criar dois structs (um para cada tipo de thread) que servirão para passar os parâmetros.
 
     j.	Saída de exemplo:
-![saída do programa 2](./pictures/programa2.1.png)
+![saída do programa 2](./pictures/programa2.1.PNG)
 
     k.	Saída de exemplo (com impressão apenas para depuração):
 ![saída do programa 2](./pictures/programa2.2.png)
