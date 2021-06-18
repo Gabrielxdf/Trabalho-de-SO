@@ -13,22 +13,35 @@ pthread_mutex_t *mutexes;
 
 typedef struct
 {
-    float* vetor; //ponteiro para o início do vetor que será preenchido;
-    unsigned int posInicial; //posição inicial de preenchimento do vetor;
-    unsigned int posFinal; //posição final de preenchimento do vetor;
-    unsigned int contMutexThread; //contador que indicará qual dos 𝑁 mutexes deve ser utilizado para controlar a região crítica da thread;
+    float* vetor;
+    unsigned int posInicial;
+    unsigned int posFinal;
+    unsigned int contMutexThread;
 }Thread_preenche;
 
 typedef struct
 {
-    float* x; //ponteiro para o início do vetor x;
-    float* y; //ponteiro para o início do vetor y;
-    float* z; //ponteiro para o início do vetor z;
-    unsigned int posInicial; //posição inicial de preenchimento do vetor;
-    unsigned int posFinal; //posição final de preenchimento do vetor;
-    unsigned int contMutexThread; //contador que indicará qual dos 𝑁 mutexes deve ser utilizado para controlar a região crítica da thread;
+    float* x;
+    float* y;
+    float* z;
+    unsigned int posInicial;
+    unsigned int posFinal;
+    unsigned int contMutexThread;
 }Thread_soma;
 
+void *preencheVetores(void *argPtr){
+    Thread_preenche *thread_p = (Thread_preenche*)argPtr;
+    unsigned int inicio = thread_p->posInicial;
+    unsigned int final = thread_p->posFinal;
+
+    for(;inicio <= final; inicio++){
+        pthread_mutex_lock(&mutexes[thread_p->contMutexThread]);
+        thread_p->vetor[inicio] = (float)rand()/(float)(RAND_MAX/1.0);
+        printf("x[%u] e o valor é: %f \n", inicio, x[inicio]);
+        pthread_mutex_unlock(&mutexes[thread_p->contMutexThread]);
+    }
+    pthread_exit(0);
+}
 
 int main() {
     setlocale(LC_ALL, "Portuguese");
@@ -53,45 +66,42 @@ int main() {
     y =(float*) malloc(sizeof(float)*tamanho_vetor);
     z =(float*) malloc(sizeof(float)*tamanho_vetor);
     mutexes = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t)*n);
-
-    //testes - apagar depois
-    testes(tamanho_vetor);
-    //fim dos testes
+    int divisao_vetor[n+1];
+    for (int i = 0; i <= n; i++){
+        divisao_vetor[i] = ((tamanho_vetor/n)*(i));
+    }
+    pthread_t thread[n];
+    for (int i = 0; i < n; ++i){
+    pthread_mutex_init(&mutexes[i],NULL);
+    Thread_preenche thread_preenche = {
+        .vetor = &x[0],
+        .posInicial = (divisao_vetor[i]),
+        .posFinal = divisao_vetor[i+1]-1,
+        .contMutexThread = i
+    };
+       pthread_create(&thread[i], NULL, preencheVetores, &(thread_preenche));
+       //jeito errado, o join logo em seguida do create da thread.
+       //pthread_join(thread[i], NULL);
+    }
+    //Assim seria o jeito certo de fazer, o join sendo depois
+    //mas não está funcionando.
+    for (int i = 0; i < n; i++){
+        pthread_join(thread[i], NULL);
+    }
 
     free(x);
     free(y);
     free(z);
     free(mutexes);
-    system("pause");
+
+    #ifdef _WIN32
+        system("pause");
+    #else __linux__
+        system("read -p 'Press Enter to continue...\n' key");
+    #endif
+    
    return 0;
 }
 
-void* preencheVetores(void *argPtr){
-    Thread_preenche *thread_p = (Thread_preenche*)argPtr;
-}
-void* somaVetores(void* argPtr);
+void *somaVetores(void* argPtr);
 
-void testes(int tamanho_vetor){
-    Thread_preenche thread_p = {
-    .vetor = &x[0],
-    .posInicial = 0,
-    .posFinal = 10,
-    .contMutexThread = 1
-    };
-    //preencheVetores((void*)&thread_p);
-    
-    int i;
-    // Get the elements of the array
-    for (i = 0; i < tamanho_vetor; ++i) {
-        x[i] = 1.2 + i;
-            
-    }
-    // Print the elements of the array
-    printf("The elements of the array are: ");
-    for (i = 0; i < tamanho_vetor; ++i) {
-        printf("%f, ", x[i]);
-    }
-    printf("%d \n", tamanho_vetor);
-    // printf() displays the string inside quotation
-    printf("Hello, World!\n");
-}
