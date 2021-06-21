@@ -50,7 +50,7 @@ Os objetivos deste trabalho são:
 
     b.	Os vetores são do tipo float e devem ser alocados usando malloc() antes de se iniciar o processo;
 
-    c.	O número de threads (𝑁) deve ser definido em runtime pelo usuário. A única restrição é a de que 16 × 107 deve ser um múltiplo de 𝑁, pois os vetores serão divididos em 𝑁 partes, uma para cada thread;
+    c.	O número de threads (𝑁) deve ser definido em runtime pelo usuário. A única restrição é a de que 16 × 107 deve ser um múltiplo de 𝑁, pois os vetores serão divididos em 𝑁 partes, uma para cada thread. Serão N threads para popular o vetor X, N threads para popular o vetor Y e N threads para calcular o vetor z = x+y;
 
     d.	Como o processamento paralelo em 𝑁 partes, deve-se criar 𝑁 mutexes para controlar a entrada na região crítica no seu código;
 
