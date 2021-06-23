@@ -17,7 +17,7 @@ Os objetivos deste trabalho são:
 
 ## Programa 1 - Problema de 𝑀 produtores e 𝑁 consumidores
 
-    a.	O usuário deverá inserir em runtime as quantidades de produtores (𝑀) e consumidores (𝑁), além do tama- nho do buffer:
+    a.	O usuário deverá inserir em runtime as quantidades de produtores (𝑀) e consumidores (𝑁), além do tamanho do buffer:
 
         i.   𝑀 e 𝑁 obviamente devem ser valores positivos, assim como o tamanho do buffer;
         ii.   O buffer é um vetor do tipo int, alocado usando malloc() e deve ser preenchido com -1.

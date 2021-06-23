@@ -67,11 +67,10 @@ void* consumer(void *arg) {
 #endif
         pthread_mutex_lock(&buffer->mutex);
 
-        if(buffer->len == 0) { // empty
+        while(buffer->len == 0) { // empty
             // wait for new items to be appended to the buffer
             pthread_cond_wait(&buffer->can_consume, &buffer->mutex);
         }
-
         // grab data
         --buffer->len;
         printf("Consumed: %d\n", buffer->buf[buffer->len]);

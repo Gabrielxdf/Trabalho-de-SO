@@ -5,11 +5,11 @@
 #include <time.h>
 
 //declaração das variáveis globais
-unsigned int contador_thread = 0;
 float *x;
 float *y;
 float *z;
 pthread_mutex_t *mutexes;
+pthread_cond_t pode_somar = PTHREAD_COND_INITIALIZER; // sinalizado quando z puder somar o x e o y
 
 typedef struct
 {
@@ -30,25 +30,30 @@ typedef struct
 }Thread_soma;
 
 void *preencheVetores(void *argPtr){
-    Thread_preenche *thread_p = (Thread_preenche*)argPtr;
-    unsigned int inicio = thread_p->posInicial;
-    unsigned int final = thread_p->posFinal;
-
-    printf("A thread %u processará os elementos dos vetores nas posições de %u a %u \n", contador_thread,
-     thread_p->posInicial, thread_p->posFinal);
-    contador_thread++;
-
+    Thread_preenche *thread_t = (Thread_preenche*)argPtr;
+    unsigned int inicio = thread_t->posInicial;
+    unsigned int final = thread_t->posFinal;
     for(;inicio <= final; inicio++){
-        pthread_mutex_lock(&mutexes[thread_p->contMutexThread]);
-        thread_p->vetor[inicio] = (float)rand()/(float)(RAND_MAX/1.0); 
-        //printf("x[%u] e o valor é: %f \n", inicio, x[inicio]);   
-        //y[inicio] = (float)rand()/(float)(RAND_MAX/1.0); //resolver depois.
-        //z[inicio] = x[inicio] + y[inicio];
-        pthread_mutex_unlock(&mutexes[thread_p->contMutexThread]);
+        thread_t->vetor[inicio] = (float)rand()/(float)(RAND_MAX/1.0);
+        //printf("x[%u] e o valor é: %f \n", inicio, x[inicio]);
     }
-    pthread_mutex_destroy(&mutexes[thread_p->contMutexThread]);
     pthread_exit(0);
 }
+
+void *somaVetores(void* argPtr){
+    Thread_soma *thread_z = (Thread_soma*)argPtr;
+    unsigned int inicio = thread_z->posInicial;
+    unsigned int final = thread_z->posFinal;
+    pthread_mutex_lock(&mutexes[thread_z->contMutexThread]);
+    pthread_cond_wait(&pode_somar, &mutexes[thread_z->contMutexThread]);
+    pthread_mutex_unlock(&mutexes[thread_z->contMutexThread]);
+    for(;inicio <= final; inicio++){
+        thread_z->z[inicio] = thread_z->x[inicio] + thread_z->y[inicio];
+        //printf("z[%u] e o valor é: %f \n", inicio, z[inicio]);
+    }
+    pthread_exit(0);
+}
+
 
 int main() {
     setlocale(LC_ALL, "Portuguese");
@@ -68,42 +73,69 @@ int main() {
     }
     }
 
-    //inicialização dos vetores
+    //inicialização dos vetores e variáveis
     x =(float*) malloc(sizeof(float)*tamanho_vetor);
     y =(float*) malloc(sizeof(float)*tamanho_vetor);
     z =(float*) malloc(sizeof(float)*tamanho_vetor);
     mutexes = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t)*n);
-
-    int divisao_vetor[n+1];
-    for (int i = 0; i <= n; i++){
-        divisao_vetor[i] = ((tamanho_vetor/n)*(i));
-    }
-
+    int divisao = tamanho_vetor / n;
     clock_t inicio = clock();
+    pthread_t thread_x[n];
+    pthread_t thread_y[n];
+    pthread_t thread_z[n];
+    Thread_preenche thread_preenche_x[n];
+    Thread_preenche thread_preenche_y[n];
+    Thread_soma thread_soma_z[n];
+
     //inicialização das threads e mutexes.
-    pthread_t thread[n];
-    Thread_preenche thread_preenche[n];
     for (int i = 0; i < n; ++i){
-        thread_preenche[i].vetor = &x[0];
-        thread_preenche[i].posInicial = (divisao_vetor[i]);
-        thread_preenche[i].posFinal = divisao_vetor[i+1]-1;
-        thread_preenche[i].contMutexThread = i;
+        int posInicial = i*divisao;
+        int posFinal = i*divisao+divisao-1;
+        //para o x
+        thread_preenche_x[i].vetor = &x[0];
+        thread_preenche_x[i].posInicial = posInicial;
+        thread_preenche_x[i].posFinal = posFinal;
+        thread_preenche_x[i].contMutexThread = i;
+
+        //para o y
+        thread_preenche_y[i].vetor = &y[0];
+        thread_preenche_y[i].posInicial = posInicial;
+        thread_preenche_y[i].posFinal = posFinal;
+        thread_preenche_y[i].contMutexThread = i;
+
+        //para o z
+        thread_soma_z[i].x = &x[0];
+        thread_soma_z[i].y = &y[0];
+        thread_soma_z[i].z = &z[0];
+        thread_soma_z[i].posInicial = posInicial;
+        thread_soma_z[i].posFinal = posFinal;
+        thread_soma_z[i].contMutexThread = i;
+
+        printf("A thread %u processará os elementos dos vetores nas posições de %u a %u \n", i,
+        posInicial, posFinal);
 
         pthread_mutex_init(&mutexes[i],NULL);
-        pthread_create(&thread[i], NULL, preencheVetores, &(thread_preenche[i]));
+        pthread_create(&thread_x[i], NULL, preencheVetores, &(thread_preenche_x[i]));
+        pthread_create(&thread_y[i], NULL, preencheVetores, &(thread_preenche_y[i]));
+        pthread_mutex_lock(&mutexes[i]);
+        pthread_cond_signal(pode_somar);
+        pthread_mutex_unlock(&mutexes[i]);
+        pthread_create(&thread_z[i], NULL, somaVetores, &(thread_soma_z[i]));
     }
 
     for (int i = 0; i < n; i++){
-        pthread_join(thread[i], NULL);
+        pthread_join(thread_x[i], NULL);
+        pthread_join(thread_y[i], NULL);
+        pthread_join(thread_z[i], NULL);
     }
     clock_t fim = clock();
-    double tempo_gasto = (double)(fim - inicio) / CLOCKS_PER_SEC;
-    
+    float tempo_gasto = (float)(fim - inicio) / CLOCKS_PER_SEC;
+
     //impressão dos resultados.
     for (int i = 0; i < tamanho_vetor; i++){
-    //printf("[%u]    x = %f    y = %f    z = %f \n", i, x[i], y[i], z[i]);
+    printf("[%u]    x = %f    y = %f    z = %f \n", i, x[i], y[i], z[i]);
     }
-    printf("Tempo de execução: %lf segundo(s). \n", tempo_gasto);
+    printf("Tempo de execução: %f segundo(s). \n", tempo_gasto);
 
     free(x);
     free(y);
@@ -118,6 +150,3 @@ int main() {
     
    return 0;
 }
-
-void *somaVetores(void* argPtr);
-
