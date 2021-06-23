@@ -33,9 +33,6 @@ void *preencheVetores(void *argPtr){
     Thread_preenche *thread_t = (Thread_preenche*)argPtr;
     unsigned int inicio = thread_t->posInicial;
     unsigned int final = thread_t->posFinal;
-    //pthread_mutex_lock(&mutexes[thread_t->contMutexThread]);
-    //pthread_cond_signal(&pode_somar);
-    //pthread_mutex_unlock(&mutexes[thread_t->contMutexThread]);
     for(;inicio <= final; inicio++){
         thread_t->vetor[inicio] = (float)rand()/(float)(RAND_MAX/1.0);
         //printf("x[%u] e o valor é: %f \n", inicio, x[inicio]);
@@ -47,21 +44,17 @@ void *somaVetores(void* argPtr){
     Thread_soma *thread_z = (Thread_soma*)argPtr;
     unsigned int inicio = thread_z->posInicial;
     unsigned int final = thread_z->posFinal;
+    
     //pthread_mutex_lock(&mutexes[thread_z->contMutexThread]);
-    //pthread_cond_wait(&pode_somar, &mutexes[thread_z->contMutexThread]);
+    pthread_cond_wait(&pode_somar, &mutexes[thread_z->contMutexThread]);
     //pthread_mutex_unlock(&mutexes[thread_z->contMutexThread]);
     for(;inicio <= final; inicio++){
         thread_z->z[inicio] = thread_z->x[inicio] + thread_z->y[inicio];
-        //printf("z[%u] e o valor é: %f \n", inicio, z[inicio]);
+        printf("z[%u] e o valor é: %f \n", inicio, z[inicio]);
     }
     pthread_exit(0);
 }
 
-void imprime_resultados(int tamanho_vetor){
-    for (int i = 0; i < tamanho_vetor; i++){
-        printf("[%u]    x = %f    y = %f    z = %f \n", i, x[i], y[i], z[i]);
-    }
-}
 
 int main() {
     setlocale(LC_ALL, "Portuguese");
@@ -123,32 +116,25 @@ int main() {
         posInicial, posFinal);
 
         pthread_mutex_init(&mutexes[i],NULL);
+        pthread_create(&thread_z[i], NULL, somaVetores, &(thread_soma_z[i]));
         pthread_create(&thread_x[i], NULL, preencheVetores, &(thread_preenche_x[i]));
         pthread_create(&thread_y[i], NULL, preencheVetores, &(thread_preenche_y[i]));
-        pthread_create(&thread_z[i], NULL, somaVetores, &(thread_soma_z[i]));
+        pthread_join(thread_x[i], NULL);
+        pthread_join(thread_y[i], NULL);
+        pthread_cond_broadcast(&pode_somar);
+        
     }
 
     for (int i = 0; i < n; i++){
-        pthread_join(thread_x[i], NULL);
-        pthread_join(thread_y[i], NULL);
         pthread_join(thread_z[i], NULL);
     }
     clock_t fim = clock();
     float tempo_gasto = (float)(fim - inicio) / CLOCKS_PER_SEC;
 
     //impressão dos resultados.
-    char escolha;
-    while (1){
-    printf("Deseja imprimir os resultados ? S/N ");
-    scanf(" %c", &escolha);
-    if (escolha == 'S' || escolha == 's'){
-        imprime_resultados(tamanho_vetor);
-        break;
-    }else if (escolha == 'N' || escolha == 'n'){    
-        break;
+    for (int i = 0; i < tamanho_vetor; i++){
+    printf("[%u]    x = %f    y = %f    z = %f \n", i, x[i], y[i], z[i]);
     }
-    }
-
     printf("Tempo de execução: %f segundo(s). \n", tempo_gasto);
 
     free(x);
@@ -157,7 +143,7 @@ int main() {
     free(mutexes);
 
     #ifdef _WIN32
-        system("pause");
+        //system("pause");
     #else __linux__
         system("read -p 'Press Enter to continue...\n' key");
     #endif
