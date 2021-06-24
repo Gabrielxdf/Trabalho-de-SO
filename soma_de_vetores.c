@@ -9,7 +9,6 @@ float *x;
 float *y;
 float *z;
 pthread_mutex_t *mutexes;
-pthread_cond_t pode_somar = PTHREAD_COND_INITIALIZER; // sinalizado quando z puder somar o x e o y
 
 typedef struct
 {
@@ -33,12 +32,15 @@ void *preencheVetores(void *argPtr){
     Thread_preenche *thread_t = (Thread_preenche*)argPtr;
     unsigned int inicio = thread_t->posInicial;
     unsigned int final = thread_t->posFinal;
-    //pthread_mutex_lock(&mutexes[thread_t->contMutexThread]);
-    //pthread_cond_signal(&pode_somar);
-    //pthread_mutex_unlock(&mutexes[thread_t->contMutexThread]);
     for(;inicio <= final; inicio++){
         thread_t->vetor[inicio] = (float)rand()/(float)(RAND_MAX/1.0);
-        //printf("x[%u] e o valor é: %f \n", inicio, x[inicio]);
+    }
+
+    /*os vetores são inicializados com números negativos, o código abaixo
+    é preciso para apenas liberar o cálculo do vetor z quando
+    os vetores x e y estiverem de fato populados */
+    if (x[final] >=0 && y[final] >=0) {
+        pthread_mutex_unlock(&mutexes[thread_t->contMutexThread]);
     }
     pthread_exit(0);
 }
@@ -47,12 +49,9 @@ void *somaVetores(void* argPtr){
     Thread_soma *thread_z = (Thread_soma*)argPtr;
     unsigned int inicio = thread_z->posInicial;
     unsigned int final = thread_z->posFinal;
-    //pthread_mutex_lock(&mutexes[thread_z->contMutexThread]);
-    //pthread_cond_wait(&pode_somar, &mutexes[thread_z->contMutexThread]);
-    //pthread_mutex_unlock(&mutexes[thread_z->contMutexThread]);
+    pthread_mutex_lock(&mutexes[thread_z->contMutexThread]);
     for(;inicio <= final; inicio++){
         thread_z->z[inicio] = thread_z->x[inicio] + thread_z->y[inicio];
-        //printf("z[%u] e o valor é: %f \n", inicio, z[inicio]);
     }
     pthread_exit(0);
 }
@@ -122,7 +121,7 @@ int main() {
         printf("A thread %u processará os elementos dos vetores nas posições de %u a %u \n", i,
         posInicial, posFinal);
 
-        pthread_mutex_init(&mutexes[i],NULL);
+        pthread_mutex_init(&mutexes[i], NULL);
         pthread_create(&thread_x[i], NULL, preencheVetores, &(thread_preenche_x[i]));
         pthread_create(&thread_y[i], NULL, preencheVetores, &(thread_preenche_y[i]));
         pthread_create(&thread_z[i], NULL, somaVetores, &(thread_soma_z[i]));
