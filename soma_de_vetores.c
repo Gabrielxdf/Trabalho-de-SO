@@ -9,6 +9,7 @@ float *x;
 float *y;
 float *z;
 pthread_mutex_t *mutexes;
+pthread_cond_t pode_somar = PTHREAD_COND_INITIALIZER; // sinalizado quando z puder somar o x e o y
 
 typedef struct
 {
@@ -39,7 +40,8 @@ void *preencheVetores(void *argPtr){
     /*os vetores são inicializados com números negativos, o código abaixo
     é preciso para apenas liberar o cálculo do vetor z quando
     os vetores x e y estiverem de fato populados */
-    if (x[final] >=0 && y[final] >=0) {
+    if (x[final] >=0.0 && y[final] >=0.0) {
+        pthread_cond_signal(&pode_somar);
         pthread_mutex_unlock(&mutexes[thread_t->contMutexThread]);
     }
     pthread_exit(0);
@@ -50,6 +52,7 @@ void *somaVetores(void* argPtr){
     unsigned int inicio = thread_z->posInicial;
     unsigned int final = thread_z->posFinal;
     pthread_mutex_lock(&mutexes[thread_z->contMutexThread]);
+    pthread_cond_wait(&pode_somar, &mutexes[thread_z->contMutexThread]);
     for(;inicio <= final; inicio++){
         thread_z->z[inicio] = thread_z->x[inicio] + thread_z->y[inicio];
     }
@@ -85,6 +88,7 @@ int main() {
     y =(float*) malloc(sizeof(float)*tamanho_vetor);
     z =(float*) malloc(sizeof(float)*tamanho_vetor);
     mutexes = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t)*n);
+    
     int divisao = tamanho_vetor / n;
     clock_t inicio = clock();
     pthread_t thread_x[n];
