@@ -1,6 +1,6 @@
 # Trabalho de Sistemas Operacionais
 
-Implementação do trabalho da disciplina de Sistemas Operacionais abordando o assunto principal de gerenciamento de 
+Implementação do trabalho da disciplina de Sistemas Operacionais abordando o assunto principal de gerenciamento de threads
 
 Os objetivos deste trabalho são:
 
